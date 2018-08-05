@@ -1,6 +1,8 @@
 import asyncio
 import datetime
 
+import yaml
+
 from urllib3 import PoolManager
 from urllib3.exceptions import HTTPError
 
@@ -23,14 +25,17 @@ async def uptime():
     pass
 
 def is_su(ctx):
-    print(ctx.message.author.id)
-    return ctx.message.author.id in ["267445257321316363","343932489401892864"]
+    global sudoers
+    return ctx.message.author.id in sudoers
 
 @bot.group(pass_context=True)
 @commands.check(is_su)
 async def sudo(ctx, cmd : str):
-    eval(cmd)
-    await bot.whisper("Command %r successfully executed." % cmd)
+    try:
+        eval(cmd)
+        await bot.whisper("Command %r successfully executed." % cmd)
+    except Exception as e:
+        await bot.whisper('Encountered error while executing %s!\n%s' % (cmd, e))
 
 @bot.command()
 async def math(formula : str):
@@ -48,12 +53,18 @@ async def isup(domain : str):
     except (ConnectionError, HTTPError) as e:
         await bot.say(e)
 
+def main():
+    global bot, pool, sudoers
+    pool = PoolManager(100)
 
-token = None
+    token = None
 
-with open('token.txt') as f:
-    token = f.read().strip()
+    with open('config.yml') as f:
+        config = yaml.load(f.read())
+        token = config['token']
+        sudoers = config['sudoers']
 
-pool = PoolManager(100)
+    bot.run(token)
 
-bot.run(token)
+if __name__ == '__main__':
+    main()
